@@ -1,7 +1,7 @@
 ### If you use `@` in your linked module names, there is a risk this module will cause data loss
 See this issue https://github.com/Rush/link-module-alias/issues/3
 
-# link-module-alias
+# copy-module-alias
 
 Setup private modules within your repo to get away from error-prone typing of long relative paths like these:
 ```js
@@ -23,7 +23,7 @@ You can setup aliases both to individual files and to directories.
 ## Install
 
 ```
-npm i --save-dev link-module-alias
+npm i --save-dev copy-module-alias
 ```
 
 ## Usage
@@ -34,7 +34,7 @@ Note: you can use `@` in front of your module but before of the possible data lo
 
 ```js
 "scripts": {
-  "postinstall": "link-module-alias"
+  "postinstall": "copy-module-alias"
 },
 // Aliases
 "_moduleAliases": {
@@ -48,23 +48,23 @@ Note: you can use `@` in front of your module but before of the possible data lo
 If you encounter issues with installing modules, you may want to set up the preinstall script as well:
 ```js
 "scripts": {
-  "postinstall": "link-module-alias",
-  "preinstall": "command -v link-module-alias && link-module-alias clean || true"
+  "postinstall": "copy-module-alias",
+  "preinstall": "command -v copy-module-alias && copy-module-alias clean || true"
 }
 ```
 
 ## How does it work?
 
-- For aliases to directories, we create symlinks with `fs.symlink`
+- For aliases to directories, we copy files.
 - For aliases to files, we create proxy modules with a package.json containing `"main"` that points to the target file
 
 ## Background
 
-This module it's almost a drop in replacement for another package https://www.npmjs.com/package/module-alias - use module `module-alias` if you like runtime require hooks and use `link-module-alias` if you want good compatibility with your IDE and no runtime hacks.
+This module it's almost a drop in replacement for another package https://www.npmjs.com/package/module-alias - use module `module-alias` if you like runtime require hooks and use `copy-module-alias` if you want good compatibility with your IDE and no runtime hacks.
 
-The key differentiator of `link-module-alias` is creating all the module links statically in form of symlinks and proxy packages inside `node_modules`, there is no hacky require hook and you don't need to load any supporting packages.
+The key differentiator of `copy-module-alias` is copying all modules statically in form of symlinks and proxy packages inside `node_modules`, there is no hacky require hook and you don't need to load any supporting packages.
 
-The key motivator to create `link-module-alias` was to fix the issue with module aliases not resolving in VS Code. https://github.com/ilearnio/module-alias/issues/19
+The key motivator to create `copy-module-alias` was to make it work in environments that don't support symlinks.
 
 ## License
 
@@ -73,3 +73,4 @@ MIT. Attribution to the `module-alias` for parts for the README and original ide
 # Contributors
 
 [@kwburnett](https://github.com/kwburnett)
+[@Rush](https://github.com/Rush)

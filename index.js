@@ -225,7 +225,7 @@ async function copyModules() {
   const modules = await Promise.all(Object.keys(moduleAliases).map(async key => {
     return copyModule(key);
   }));
-  console.log('link-module-alias:', modules.map(addColor).join(', '));
+  console.log('copy-module-alias:', modules.map(addColor).join(', '));
 }
 
 async function removeModules() {
@@ -241,11 +241,11 @@ async function removeModules() {
     return removeModule(mod);
   }));
   if(removedModules.length) {
-    console.log('link-module-alias: Cleaned ', removedModules.filter(v => {
+    console.log('copy-module-alias: Cleaned ', removedModules.filter(v => {
       return v.type !== 'none';
     }).map(addColorRemove).join(' '));
   } else {
-    console.log('link-module-alias: No modules to clean');
+    console.log('copy-module-alias: No modules to clean');
   }
 }
 
