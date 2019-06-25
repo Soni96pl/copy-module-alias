@@ -1,7 +1,7 @@
 {
-  "name": "link-module-alias",
+  "name": "copy-module-alias",
   "version": "1.2.0",
-  "description": "Create permanent links for _moduleAliases",
+  "description": "Create file copies links for _moduleAliases",
   "bin": "index.js",
   "main": "index.js",
   "directories": {
@@ -12,18 +12,19 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Rush/link-module-alias.git"
+    "url": "git+https://github.com/Soni96pl/copy-module-alias.git"
   },
   "author": "Damian Kaczmarek <rush@rushbase.net>",
   "contributors": [
     "Kevin Burnett <kwburnett@gmail.com>",
-    "Klaus Sevensleeper"
+    "Klaus Sevensleeper",
+    "Sonia Chronowska"
   ],
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/Rush/link-module-alias/issues"
+    "url": "https://github.com/Soni96pl/copy-module-alias/issues"
   },
-  "homepage": "https://github.com/Rush/link-module-alias#readme",
+  "homepage": "https://github.com/Soni96pl/copy-module-alias#readme",
   "devDependencies": {},
   "engines": {
     "node": "> 8.0.0"
