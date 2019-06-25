@@ -2,6 +2,7 @@
 // Author: Damian "Rush" Kaczmarek
 
 const fs = require('fs');
+const fsp = require('fs').promises;
 const path = require('path');
 const child_process = require('child_process');
 
@@ -37,7 +38,23 @@ const LINK_ALIAS_PREFIX = '.link-module-alias-';
 const LINK_ALIAS_NESTED_SEPARATOR = '--';
 const DIR_LINK_TYPE = ((process.platform === 'win32') ? 'junction' : 'dir');
 
-async function tryUnlink(path) {
+async function copyDir(src, dest) {
+  const entries = await fsp.readdir(src, { withFileTypes: true });
+  await fsp.mkdir(dest);
+  
+  for (let entry of entries) {
+      const srcPath = path.join(src, entry.name);
+      const destPath = path.join(dest, entry.name);
+      
+      if(entry.isDirectory()) {
+        await copyDir(srcPath,destPath);
+      } else {
+        await fsp.copyFile(srcPath,destPath);
+      }
+  }
+}
+
+async function tryRemove(path) {
   try {
     return await unlink(path);
   } catch (err) {
@@ -47,12 +64,23 @@ async function tryUnlink(path) {
   }
 };
 
-async function tryRmdir(path) {
-  try {
-    return await rmdir(path);
-  } catch (err) {
-    if (err.code !== 'ENOENT') {
-      throw err;
+async function tryRmdir(src) {
+  if (fs.existsSync(src)) {
+    const statKey = await lstat(src);
+    if (!statKey.isDirectory()) {
+      return;
+    }
+
+    const entries = await fsp.readdir(src, { withFileTypes: true });
+
+    for (let entry of entries) {
+      const srcPath = path.join(src, entry.name);
+
+      if (entry.isDirectory()) {
+        await tryRmdir(srcPath);
+      } else {
+        await unlink(srcPath);
+      }
     }
   }
 };
@@ -60,7 +88,7 @@ async function tryRmdir(path) {
 function addColor({moduleName, type, target}) {
   if(type === 'none') {
     return chalk.red(moduleName) + ` -> ${chalk.bold(chalk.red('ALREADY EXISTS'))}`;
-  } else if(type === 'symlink') {
+  } else if(type === 'copy') {
     return chalk.cyan(moduleName) + ` -> ${chalk.bold(target)}`;
   } else if(type === 'proxy') {
     return chalk.green(moduleName) + ` -> ${chalk.bold(target)}`;
@@ -68,10 +96,10 @@ function addColor({moduleName, type, target}) {
   return `${moduleName} `;
 }
 
-function addColorUnlink({moduleName, type}) {
+function addColorRemove({moduleName, type}) {
   if(type === 'none') {
     moduleName = chalk.red(moduleName);
-  } else if(type === 'symlink') {
+  } else if(type === 'copy') {
     moduleName = chalk.cyan(moduleName);
   } else if(type === 'proxy') {
     moduleName = chalk.green(moduleName);
@@ -99,7 +127,7 @@ async function exists(filename) {
   }
 }
 
-async function unlinkModule(moduleName) {
+async function removeModule(moduleName) {
   const moduleDir = path.join('node_modules', moduleName);
   let statKey;
   try {
@@ -107,14 +135,14 @@ async function unlinkModule(moduleName) {
   } catch(err) {}
 
   let type;
-  if(statKey && statKey.isSymbolicLink()) {
-    await tryUnlink(moduleDir);
-    await tryUnlink(path.join('node_modules', getModuleAlias(moduleName)));
-    type = 'symlink';
-  } else if(statKey) {
-    await tryUnlink(path.join(moduleDir, 'package.json'));
+  if(statKey && statKey.isDirectory()) {
     await tryRmdir(moduleDir);
-    await tryUnlink(path.join('node_modules', getModuleAlias(moduleName)));
+    await tryRmdir(path.join('node_modules', getModuleAlias(moduleName)));
+    type = 'copy';
+  } else if(statKey) {
+    await tryRemove(path.join(moduleDir, 'package.json'));
+    await tryRmdir(moduleDir);
+    await tryRemove(path.join('node_modules', getModuleAlias(moduleName)));
     type = 'proxy';
   } else {
     type = 'none';
@@ -132,10 +160,10 @@ function js(strings, ...interpolatedValues) {
   }, '');
 }
 
-async function linkModule(moduleName) {
+async function copyModule(moduleName) {
   const moduleDir = path.join('node_modules', moduleName);
   const moduleExists = await exists(moduleDir);
-  const linkExists = moduleExists && await exists(path.join('node_modules', getModuleAlias(moduleName)));
+  const copyExists = moduleExists && await exists(path.join('node_modules', getModuleAlias(moduleName)));
   const target = moduleAliases[moduleName];
 
   if (moduleName.match(/^@/) && !packageJson._moduleAliasIgnoreWarning) {
@@ -146,16 +174,16 @@ async function linkModule(moduleName) {
   }
 
   let type;
-  if(moduleExists && !linkExists) {
+  if(moduleExists && !copyExists) {
     console.error(chalk.red(`Module ${moduleName} already exists and wasn't created by us, skipping`));
     type = 'none';
     return { moduleName, type, target };
-  } else if(linkExists) {
-    await unlinkModule(moduleName);
+  } else if(copyExists) {
+    await removeModule(moduleName);
   }
 
   if(target.match(/\.js$/)) {
-    // console.log(`Target ${target} is a direct link, creating proxy require`);
+    // console.log(`Target ${target} is a direct copy, creating proxy require`);
     await mkdir(moduleDir);
     await writeFile(path.join(moduleDir, 'package.json'), js`
       {
@@ -184,22 +212,23 @@ async function linkModule(moduleName) {
         }
       }
     }
-    await symlink(path.join('../', target), moduleDir, DIR_LINK_TYPE);
-    type = 'symlink';
+
+    await copyDir(target, moduleDir);
+    type = 'copy';
   }
   await writeFile(path.join('node_modules', getModuleAlias(moduleName)), '');
   return { moduleName, type, target };
 }
 
-async function linkModules() {
+async function copyModules() {
   try { await mkdir('node_modules'); } catch(err) {}
   const modules = await Promise.all(Object.keys(moduleAliases).map(async key => {
-    return linkModule(key);
+    return copyModule(key);
   }));
   console.log('link-module-alias:', modules.map(addColor).join(', '));
 }
 
-async function unlinkModules() {
+async function removeModules() {
   const nodeModulesExists = await exists('node_modules');
   if(!nodeModulesExists) {
     return;
@@ -208,20 +237,20 @@ async function unlinkModules() {
 
   const modules = allModules.map(getModuleNameFromAliasFile).filter(v => !!v);
 
-  const unlinkedModules = await Promise.all(modules.map(mod => {
-    return unlinkModule(mod);
+  const removedModules = await Promise.all(modules.map(mod => {
+    return removeModule(mod);
   }));
-  if(unlinkedModules.length) {
-    console.log('link-module-alias: Cleaned ', unlinkedModules.filter(v => {
+  if(removedModules.length) {
+    console.log('link-module-alias: Cleaned ', removedModules.filter(v => {
       return v.type !== 'none';
-    }).map(addColorUnlink).join(' '));
+    }).map(addColorRemove).join(' '));
   } else {
     console.log('link-module-alias: No modules to clean');
   }
 }
 
 if(process.argv[2] === 'clean') {
-  unlinkModules();
+  removeModules();
 } else {
-  linkModules();
+  copyModules();
 }
