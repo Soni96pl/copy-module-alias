@@ -175,10 +175,6 @@ async function copyModule(moduleName) {
 
   let type;
   if(moduleExists && !copyExists) {
-    console.error(chalk.red(`Module ${moduleName} already exists and wasn't created by us, skipping`));
-    type = 'none';
-    return { moduleName, type, target };
-  } else if(copyExists) {
     await removeModule(moduleName);
   }
 
