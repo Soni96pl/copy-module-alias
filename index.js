@@ -82,6 +82,8 @@ async function tryRmdir(src) {
         await unlink(srcPath);
       }
     }
+
+    await fsp.rmdir(src);
   }
 };
 
