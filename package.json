@@ -1,6 +1,6 @@
 {
   "name": "copy-module-alias",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "Create file copies links for _moduleAliases",
   "bin": "index.js",
   "main": "index.js",
