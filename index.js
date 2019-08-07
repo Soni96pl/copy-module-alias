@@ -2,7 +2,6 @@
 // Author: Damian "Rush" Kaczmarek
 
 const fs = require('fs');
-const fsp = require('fs').promises;
 const path = require('path');
 const child_process = require('child_process');
 
@@ -26,6 +25,7 @@ const stat = promisify(fs.stat);
 const lstat = promisify(fs.lstat);
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
+const copyFile = promisify(fs.copyFile);
 const unlink = promisify(fs.unlink);
 const readdir = promisify(fs.readdir);
 const symlink = promisify(fs.symlink);
@@ -39,8 +39,8 @@ const LINK_ALIAS_NESTED_SEPARATOR = '--';
 const DIR_LINK_TYPE = ((process.platform === 'win32') ? 'junction' : 'dir');
 
 async function copyDir(src, dest) {
-  const entries = await fsp.readdir(src, { withFileTypes: true });
-  await fsp.mkdir(dest);
+  const entries = await readdir(src, { withFileTypes: true });
+  await mkdir(dest);
   
   for (let entry of entries) {
       const srcPath = path.join(src, entry.name);
@@ -49,7 +49,7 @@ async function copyDir(src, dest) {
       if(entry.isDirectory()) {
         await copyDir(srcPath,destPath);
       } else {
-        await fsp.copyFile(srcPath,destPath);
+        await copyFile(srcPath,destPath);
       }
   }
 }
@@ -71,7 +71,7 @@ async function tryRmdir(src) {
       return;
     }
 
-    const entries = await fsp.readdir(src, { withFileTypes: true });
+    const entries = await readdir(src, { withFileTypes: true });
 
     for (let entry of entries) {
       const srcPath = path.join(src, entry.name);
@@ -83,7 +83,7 @@ async function tryRmdir(src) {
       }
     }
 
-    await fsp.rmdir(src);
+    await rmdir(src);
   }
 };
 
